@@ -1,0 +1,67 @@
+name: Generate Changed File Links
+
+on:
+  workflow_dispatch:  # 可手動觸發（也可以換成 push、schedule）
+
+jobs:
+  generate-links:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 檢出本 repo（generate-link）
+      - name: Checkout current repo (generate-link)
+        uses: actions/checkout@v4
+        with:
+          path: generate-link
+
+      # 2. 檢出目標 repo：Dr-XYZ/translated-content 的 temp 分支
+      - name: Checkout translated-content repo (temp branch)
+        uses: actions/checkout@v4
+        with:
+          repository: Dr-XYZ/translated-content
+          ref: temp
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: translated-content
+
+      # 3. 取得變更的檔案清單（相對於 main 的 merge-base）
+      - name: Get changed files in translated-content
+        working-directory: translated-content
+        run: |
+          git fetch origin main
+          BASE=$(git merge-base origin/main HEAD)
+          git diff --name-only $BASE > ../generate-link/changed_files.txt
+
+      # 4. 產生 Markdown 連結並覆蓋 README 中的區塊
+      - name: Generate markdown links and update README
+        working-directory: generate-link
+        run: |
+          echo "## 🔗 Modified Files" > links.md
+          while IFS= read -r file; do
+            # 解析路徑取得 locale 與 path
+            stripped="${file#files/}"
+            locale="${stripped%%/*}"
+            path="${stripped#*/}"
+            path="${path%/index.md}"
+            url="https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=$locale&path=$path"
+            echo "- [$file]($url)" >> links.md
+          done < changed_files.txt
+
+          # 移除舊區塊（從 ## 🔗 Modified Files 到下一個標題或檔案結尾）
+          if grep -q "## 🔗 Modified Files" README.md; then
+            awk '/## 🔗 Modified Files/ {flag=1; next} /^## / {flag=0} !flag' README.md > README.tmp
+            mv README.tmp README.md
+          fi
+
+          # 附加新區塊
+          echo >> README.md
+          cat links.md >> README.md
+
+      # 5. Commit 並推送變更
+      - name: Commit and push to generate-link repo
+        working-directory: generate-link
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update README with links to changed files" || echo "No changes to commit"
+          git push origin HEAD
