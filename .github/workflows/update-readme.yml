@@ -28,6 +28,7 @@ jobs:
         working-directory: translated-content
         run: |
           git fetch origin main
+          git checkout temp  # 明確切到 temp 分支（可選，確保在 temp）
           BASE=$(git merge-base origin/main HEAD)
           git diff --name-only $BASE > ../generate-link/changed_files.txt
 
