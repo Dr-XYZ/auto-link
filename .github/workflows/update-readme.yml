@@ -1,23 +1,21 @@
 name: Generate Changed Files Links
 
 on:
-  workflow_dispatch:  # 手動觸發
+  workflow_dispatch:
   push:
     branches:
-      - main          # push main 時也會執行
+      - main
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout 本 repo（執行此 action 的 repo）
       - name: Checkout self repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Checkout translated-content repo 的 temp 分支 (公開 repo 不需 token)
       - name: Checkout translated-content repo (temp branch)
         uses: actions/checkout@v4
         with:
@@ -26,7 +24,6 @@ jobs:
           path: translated-content
           fetch-depth: 0
 
-      # 3. 取得 temp 分支相較 main 分支的變更檔案路徑
       - name: Get changed files
         working-directory: translated-content
         run: |
@@ -35,17 +32,16 @@ jobs:
           echo "Merge base commit: $BASE"
           git diff --name-only $BASE > ../changed_files.txt
 
-      # 4. 產生連結並寫入 README.md
       - name: Generate links and update README.md
         run: |
           echo "# Changed Files Links" > README.md
           while IFS= read -r file
           do
-            encoded_path=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$file'''))")
-            echo "- https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=&branch=&locale=&path=$encoded_path" >> README.md
+            path=${file#files/zh-tw/}
+            encoded_path=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$path'''))")
+            echo "- https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=$encoded_path" >> README.md
           done < changed_files.txt
 
-      # 5. Commit 並推送回本 repo
       - name: Commit and push README.md
         env:
           PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
