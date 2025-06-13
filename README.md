@@ -1,5 +1,5 @@
 # Changed Files Links
-- [ ] https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=web/mathml
+- [x] https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=web/mathml
 - [ ] https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=web/performance
 - [ ] https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=web/svg/reference/attribute/stroke-dashoffset
 - [ ] https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=web/svg/tutorials/svg_from_scratch/basic_shapes
