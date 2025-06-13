@@ -2,9 +2,7 @@ name: Generate Changed Files Links
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+
 
 jobs:
   update-readme:
