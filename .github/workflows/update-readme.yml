@@ -1,22 +1,23 @@
 name: Generate Changed Files Links
 
 on:
+  workflow_dispatch:  # 手動觸發
   push:
     branches:
-      - main  # 或其他你想觸發的分支
+      - main          # push main 時也會執行
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout 儲存 Action 的 repo（也就是執行這個 workflow 的 repo）
+      # 1. Checkout 本 repo（執行此 action 的 repo）
       - name: Checkout self repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Checkout translated-content repo 的 temp 分支（完整歷史）
+      # 2. Checkout translated-content repo 的 temp 分支 (公開 repo 不需 token)
       - name: Checkout translated-content repo (temp branch)
         uses: actions/checkout@v4
         with:
@@ -24,17 +25,17 @@ jobs:
           ref: temp
           path: translated-content
           fetch-depth: 0
-          token: ${{ secrets.PAT_FOR_TRANSLATED }} # 如果是私有 repo，需 PAT，公開 repo 可省略
 
-      # 3. 取得 temp 分支相較 main 分支的更新檔案路徑
+      # 3. 取得 temp 分支相較 main 分支的變更檔案路徑
       - name: Get changed files
         working-directory: translated-content
         run: |
           git fetch origin main
           BASE=$(git merge-base origin/main HEAD)
+          echo "Merge base commit: $BASE"
           git diff --name-only $BASE > ../changed_files.txt
 
-      # 4. 生成連結並寫入 README.md
+      # 4. 產生連結並寫入 README.md
       - name: Generate links and update README.md
         run: |
           echo "# Changed Files Links" > README.md
@@ -44,7 +45,7 @@ jobs:
             echo "- https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=&branch=&locale=&path=$encoded_path" >> README.md
           done < changed_files.txt
 
-      # 5. Commit 並推送 README.md 回儲存 Action 的 repo
+      # 5. Commit 並推送回本 repo
       - name: Commit and push README.md
         env:
           PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
