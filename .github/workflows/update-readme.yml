@@ -1,68 +1,56 @@
-name: Generate Changed File Links
+name: Generate Changed Files Links
 
 on:
-  workflow_dispatch:  # 可手動觸發（也可以換成 push、schedule）
+  push:
+    branches:
+      - main  # 或其他你想觸發的分支
 
 jobs:
-  generate-links:
+  update-readme:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 檢出本 repo（generate-link）
-      - name: Checkout current repo (generate-link)
+      # 1. Checkout 儲存 Action 的 repo（也就是執行這個 workflow 的 repo）
+      - name: Checkout self repo
         uses: actions/checkout@v4
         with:
-          path: generate-link
+          fetch-depth: 0
 
-      # 2. 檢出目標 repo：Dr-XYZ/translated-content 的 temp 分支
+      # 2. Checkout translated-content repo 的 temp 分支（完整歷史）
       - name: Checkout translated-content repo (temp branch)
         uses: actions/checkout@v4
         with:
           repository: Dr-XYZ/translated-content
           ref: temp
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: translated-content
+          fetch-depth: 0
+          token: ${{ secrets.PAT_FOR_TRANSLATED }} # 如果是私有 repo，需 PAT，公開 repo 可省略
 
-      # 3. 取得變更的檔案清單（相對於 main 的 merge-base）
-      - name: Get changed files in translated-content
+      # 3. 取得 temp 分支相較 main 分支的更新檔案路徑
+      - name: Get changed files
         working-directory: translated-content
         run: |
           git fetch origin main
-          git checkout temp  # 明確切到 temp 分支（可選，確保在 temp）
           BASE=$(git merge-base origin/main HEAD)
-          git diff --name-only origin/main
+          git diff --name-only $BASE > ../changed_files.txt
 
-      # 4. 產生 Markdown 連結並覆蓋 README 中的區塊
-      - name: Generate markdown links and update README
-        working-directory: generate-link
+      # 4. 生成連結並寫入 README.md
+      - name: Generate links and update README.md
         run: |
-          echo "## 🔗 Modified Files" > links.md
-          while IFS= read -r file; do
-            # 解析路徑取得 locale 與 path
-            stripped="${file#files/}"
-            locale="${stripped%%/*}"
-            path="${stripped#*/}"
-            path="${path%/index.md}"
-            url="https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=$locale&path=$path"
-            echo "- [$file]($url)" >> links.md
+          echo "# Changed Files Links" > README.md
+          while IFS= read -r file
+          do
+            encoded_path=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$file'''))")
+            echo "- https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=&branch=&locale=&path=$encoded_path" >> README.md
           done < changed_files.txt
 
-          # 移除舊區塊（從 ## 🔗 Modified Files 到下一個標題或檔案結尾）
-          if grep -q "## 🔗 Modified Files" README.md; then
-            awk '/## 🔗 Modified Files/ {flag=1; next} /^## / {flag=0} !flag' README.md > README.tmp
-            mv README.tmp README.md
-          fi
-
-          # 附加新區塊
-          echo >> README.md
-          cat links.md >> README.md
-
-      # 5. Commit 並推送變更
-      - name: Commit and push to generate-link repo
-        working-directory: generate-link
+      # 5. Commit 並推送 README.md 回儲存 Action 的 repo
+      - name: Commit and push README.md
+        env:
+          PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Update README with links to changed files" || echo "No changes to commit"
-          git push origin HEAD
+          git commit -m "Update README with changed files links" || echo "No changes to commit"
+          git push https://x-access-token:${PAT}@github.com/${{ github.repository }}.git HEAD
