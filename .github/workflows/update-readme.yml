@@ -38,6 +38,8 @@ jobs:
           while IFS= read -r file
           do
             path=${file#files/zh-tw/}
+            path=${path%index.md}
+            path=${path%/}
             encoded_path=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$path'''))")
             echo "- https://passionpenguin.github.io/mdn_l10n_helper/#/compare?owner=Dr-XYZ&branch=temp&locale=zh-tw&path=$encoded_path" >> README.md
           done < changed_files.txt
